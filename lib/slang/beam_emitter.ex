@@ -1,12 +1,14 @@
 defmodule Slang.BeamEmitter do
   import Slang.Toolkit.BeamEmitter
 
-  def emit_slang_payout_rule(%{name: name, ast: ast}),
-    do: emit_function(name, emit_slang_ast(ast))
+  def emit_slang_payout_rule(%{name: name, ast: ast}) do
+    env_var = emit_var(:Env)
+    emit_function(name, [env_var], emit_slang_ast(ast))
+  end
 
   def emit_slang_range_table(%{name: name, rows: rows}) do
     rows = Enum.map(rows, &emit_slang_range_table_row/1)
-    emit_function(name, emit_list(rows))
+    emit_function(name, [], emit_list(rows))
   end
 
   def emit_slang_range_table_row(row) do
@@ -14,14 +16,24 @@ defmodule Slang.BeamEmitter do
     lower_bound = emit_slang_ast(row.lower_bound)
     upper_bound = emit_slang_ast(row.upper_bound)
     return_value = row.return_value |> emit_slang_ast() |> emit_lambda([allocation_var])
-    %{lower_bound: lower_bound, upper_bound: upper_bound, return_value: return_value} |> emit_map()
+
+    %{lower_bound: lower_bound, upper_bound: upper_bound, return_value: return_value}
+    |> emit_map()
   end
 
-  def emit_slang_ast([:nil, anno]), do: emit_atom(:nil, anno)
+  def emit_slang_ast([nil, anno]), do: emit_atom(nil, anno)
 
   def emit_slang_ast([:number, number, anno]), do: emit_decimal_new(number, anno)
 
-  def emit_slang_ast([:identifier, name, anno]), do: emit_var(name, anno)
+  def emit_slang_ast([:identifier, :Allocation, anno]) do
+    emit_var(:Allocation, anno)
+  end
+
+  def emit_slang_ast([:identifier, name, anno]) do
+    env_var = emit_var(:Env, anno)
+
+    emit_external_call(:maps, :get, [{:atom, anno, name}, env_var], anno)
+  end
 
   def emit_slang_ast([:+, left_operand_ast, right_operand_ast, anno]) do
     left_operand = emit_slang_ast(left_operand_ast)
@@ -88,13 +100,12 @@ defmodule Slang.BeamEmitter do
 
   def emit_slang_help() do
     '''
-    help() ->
-      fun(X) -> X end.
+    help(Env) ->
+      maps:get(test, Env).
     '''
     |> :erl_scan.string()
     |> elem(1)
     |> :erl_parse.parse()
     |> elem(1)
-    |> IO.inspect
   end
 end

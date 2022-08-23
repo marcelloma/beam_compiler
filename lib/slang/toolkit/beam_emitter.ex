@@ -27,12 +27,12 @@ defmodule Slang.Toolkit.BeamEmitter do
     emit_nil()
   end
 
-  def emit_list([head|list]) do
+  def emit_list([head | list]) do
     [:cons, line_1(), head, emit_list(list)] |> List.to_tuple()
   end
 
-  def emit_function(name, body),
-    do: {:function, line_1(), name, 0, [{:clause, line_1(), [], [], [body]}]}
+  def emit_function(name, args, body),
+    do: {:function, line_1(), name, Enum.count(args), [{:clause, line_1(), args, [], [body]}]}
 
   def emit_lambda(body, args),
     do: {:fun, line_1(), {:clauses, [{:clause, line_1(), args, [], [body]}]}}
@@ -55,7 +55,7 @@ defmodule Slang.Toolkit.BeamEmitter do
   def emit_call(function, args, anno),
     do: {:call, anno, {:atom, anno, function}, args}
 
-  defp emit_external_call(module, function, args, anno),
+  def emit_external_call(module, function, args, anno),
     do: {:call, anno, {:remote, anno, {:atom, anno, module}, {:atom, anno, function}}, args}
 
   defp emit_attribute(key, value), do: {:attribute, line_1(), key, value}

@@ -9,7 +9,7 @@ defmodule Slang.Compiler do
 
     payout_rule_function_exports =
       payout_rule_functions
-      |> Enum.map(&{&1.name, 0})
+      |> Enum.map(&{&1.name, 1})
       |> emit_export()
 
     emitted_payout_rules = Enum.map(payout_rule_functions, &emit_slang_payout_rule/1)
@@ -24,7 +24,7 @@ defmodule Slang.Compiler do
       [
         emit_module(module_name),
         emit_inline(),
-        payout_rule_function_exports,
+        payout_rule_function_exports
       ]
       |> Kernel.++(emitted_payout_rules)
       |> Kernel.++(emitted_range_tables)
@@ -46,7 +46,7 @@ defmodule Slang.Compiler do
     Enum.map(structure.range_tables, fn range_table ->
       range_table
       |> Map.put(:name, :"range_table_#{range_table.id}")
-      |> Map.update!(:rows, & prepare_range_table_rows/1)
+      |> Map.update!(:rows, &prepare_range_table_rows/1)
     end)
   end
 

@@ -14,7 +14,7 @@ defmodule Slang do
       },
       %{
         id: 3,
-        formula: "marginal_payout(30000, range_table_AcceleratorTable())"
+        formula: "marginal_payout(connector_field_Amount, range_table_AcceleratorTable())"
       }
     ],
     range_tables: [
@@ -47,9 +47,11 @@ defmodule Slang do
   def compile_structure() do
     Compiler.compile(@structure)
 
-    apply(:company_1000, :payout_rule_1, []) |> IO.inspect(label: "company_1000.payout_rule_1")
-    apply(:company_1000, :payout_rule_2, []) |> IO.inspect(label: "company_1000.payout_rule_2")
-    apply(:company_1000, :payout_rule_3, []) |> IO.inspect(label: "company_1000.payout_rule_3")
+    apply(:company_1000, :payout_rule_1, [%{}]) |> IO.inspect(label: "company_1000.payout_rule_1")
+    apply(:company_1000, :payout_rule_2, [%{}]) |> IO.inspect(label: "company_1000.payout_rule_2")
+
+    apply(:company_1000, :payout_rule_3, [%{connector_field_Amount: Decimal.new("30000")}])
+    |> IO.inspect(label: "company_1000.payout_rule_3")
 
     :ok
   end
