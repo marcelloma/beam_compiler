@@ -113,6 +113,24 @@ defmodule Slang.Parser do
     end
   end
 
+  defp list_items(tokens, items \\ []) do
+    debug(tokens, "list_items")
+
+    cond do
+      match(tokens, :right_bracket) ->
+        {_token, tokens} = consume(tokens)
+        {items, tokens}
+
+      match(tokens, :comma) ->
+        {_token, tokens} = consume(tokens)
+        list_items(tokens, items)
+
+      true ->
+        {expression, tokens} = expression(tokens)
+        list_items(tokens, items ++ [expression])
+    end
+  end
+
   defp primary(tokens) do
     debug(tokens, "primary")
 
@@ -121,9 +139,9 @@ defmodule Slang.Parser do
         {token, tokens} = consume(tokens)
         {[:number, token.text, extract_meta(token)], tokens}
 
-      match(tokens, :nil) ->
+      match(tokens, nil) ->
         {token, tokens} = consume(tokens)
-        {[:nil, extract_meta(token)], tokens}
+        {[nil, extract_meta(token)], tokens}
 
       match(tokens, :identifier) ->
         {token, tokens} = consume(tokens)
@@ -134,6 +152,11 @@ defmodule Slang.Parser do
         {expression, tokens} = expression(tokens)
         {_token, tokens} = match!(tokens, :right_paren)
         {expression, tokens}
+
+      match(tokens, :left_bracket) ->
+        {token, tokens} = consume(tokens)
+        {items, tokens} = list_items(tokens)
+        {[:list, items, extract_meta(token)], tokens}
     end
   end
 

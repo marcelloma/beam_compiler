@@ -15,6 +15,10 @@ defmodule Slang do
       %{
         id: 3,
         formula: "marginal_payout(connector_field_Amount, range_table_AcceleratorTable())"
+      },
+      %{
+        id: 4,
+        formula: "sum([#{Enum.join(1..1000, ",")}])"
       }
     ],
     range_tables: [
@@ -44,14 +48,29 @@ defmodule Slang do
     ]
   }
 
+  def measured(name, times \\ 1000, fun) do
+    {usec, _} =
+      :timer.tc(fn ->
+        Enum.each(1..times, fn _ ->
+          fun.()
+        end)
+      end)
+
+    IO.puts("#{times}x #{name}: #{usec / 1000}ms")
+  end
+
   def compile_structure() do
     Compiler.compile(@structure)
 
-    apply(:company_1000, :payout_rule_1, [%{}]) |> IO.inspect(label: "company_1000.payout_rule_1")
-    apply(:company_1000, :payout_rule_2, [%{}]) |> IO.inspect(label: "company_1000.payout_rule_2")
+    args = [%{}]
+    measured("Payout Rule 1", fn -> apply(:company_1000, :payout_rule_1, args) end)
+    measured("Payout Rule 2", fn -> apply(:company_1000, :payout_rule_2, args) end)
 
-    apply(:company_1000, :payout_rule_3, [%{connector_field_Amount: Decimal.new("30000")}])
-    |> IO.inspect(label: "company_1000.payout_rule_3")
+    args = [%{connector_field_Amount: Decimal.new("30000")}]
+    measured("Payout Rule 3", fn -> apply(:company_1000, :payout_rule_3, args) end)
+
+    args = [%{}]
+    measured("Payout Rule 4", fn -> apply(:company_1000, :payout_rule_4, args) end)
 
     :ok
   end

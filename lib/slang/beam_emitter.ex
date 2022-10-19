@@ -59,6 +59,12 @@ defmodule Slang.BeamEmitter do
     emit_decimal_divide(left_operand, right_operand, anno)
   end
 
+  def emit_slang_ast([:list, item_asts, _anno]) do
+    item_asts
+    |> Enum.map(&emit_slang_ast(&1))
+    |> emit_list()
+  end
+
   def emit_slang_ast([:fn_call, name, [], anno]) do
     emit_call(name, [], anno)
   end
@@ -69,8 +75,12 @@ defmodule Slang.BeamEmitter do
     emit_call(:marginal_payout, [amount, range_table], anno)
   end
 
+  def emit_slang_ast([:fn_call, :sum, [list_ast], anno]) do
+    emit_call(:sum, [emit_slang_ast(list_ast)], anno)
+  end
+
   def emit_slang_builtins() do
-    [emit_slang_marginal_payout(), emit_slang_help()]
+    [emit_slang_marginal_payout(), emit_slang_sum()]
   end
 
   def emit_slang_marginal_payout() do
@@ -91,6 +101,20 @@ defmodule Slang.BeamEmitter do
         {Value, 'Elixir.Decimal':add(Payout, ReturnValue(Allocation))}
       end,
       lists:foldl(Reducer, {Amount, 'Elixir.Decimal':new(0)}, RangeTable).
+    '''
+    |> :erl_scan.string()
+    |> elem(1)
+    |> :erl_parse.parse()
+    |> elem(1)
+  end
+
+  def emit_slang_sum() do
+    '''
+    sum(List) ->
+      Reducer = fun(Value, Acc) ->
+        'Elixir.Decimal':add(Value, Acc)
+      end,
+      lists:foldl(Reducer, 'Elixir.Decimal':new(0), List).
     '''
     |> :erl_scan.string()
     |> elem(1)
