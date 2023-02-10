@@ -72,6 +72,9 @@ defmodule Slang do
     args = [%{}]
     measured("Payout Rule 4", fn -> apply(:company_1000, :payout_rule_4, args) end)
 
+    args = [%{connector_field_Amount: Decimal.new("30000")}]
+    apply(:company_1000, :payout_rule_3, args) |> IO.inspect()
+
     :ok
   end
 

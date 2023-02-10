@@ -86,21 +86,24 @@ defmodule Slang.BeamEmitter do
   def emit_slang_marginal_payout() do
     '''
     marginal_payout(Amount, RangeTable) ->
+      Zero = 'Elixir.Decimal':new(0),
       Reducer = fun(Row, {Value, Payout}) ->
         LowerBound = maps:get(lower_bound, Row),
         UpperBound = maps:get(upper_bound, Row),
         ReturnValue = maps:get(return_value, Row),
+        ValueIsZero = 'Elixir.Decimal':compare(Value, Zero) =:= eq,
         Allocation =
           if
-            LowerBound =:= nil andalso UpperBound =:= nil -> Value;
-            LowerBound =:= nil -> 'Elixir.Decimal':min(UpperBound, Value);
-            UpperBound =:= nil -> 'Elixir.Decimal':max('Elixir.Decimal':sub(Value, LowerBound), 'Elixir.Decimal':new(0));
-            true -> 'Elixir.Decimal':max('Elixir.Decimal':sub('Elixir.Decimal':min(UpperBound, Value), LowerBound), 'Elixir.Decimal':new(0))
+            ValueIsZero -> Zero;
+            LowerBound =:= nil andalso UpperBound =:= nil -> Amount;
+            LowerBound =:= nil -> 'Elixir.Decimal':min(UpperBound, Amount);
+            UpperBound =:= nil -> 'Elixir.Decimal':max('Elixir.Decimal':sub(Amount, LowerBound), Zero);
+            true -> 'Elixir.Decimal':max('Elixir.Decimal':sub('Elixir.Decimal':min(UpperBound, Amount), LowerBound), Zero)
           end,
         % io:format("~f -> ~f ~n", ['Elixir.Decimal':to_float(Allocation), 'Elixir.Decimal':to_float(ReturnValue(Allocation))]),
-        {Value, 'Elixir.Decimal':add(Payout, ReturnValue(Allocation))}
+        {'Elixir.Decimal':sub(Value, Allocation), 'Elixir.Decimal':add(Payout, ReturnValue(Allocation))}
       end,
-      lists:foldl(Reducer, {Amount, 'Elixir.Decimal':new(0)}, RangeTable).
+      lists:foldl(Reducer, {Amount, Zero}, RangeTable).
     '''
     |> :erl_scan.string()
     |> elem(1)
